@@ -39,14 +39,10 @@ export default function Home() {
 
         {/* Título */}
         <h1 className="text-white text-center text-[22px] font-extrabold leading-tight tracking-tight">
-          ASOCIACION MUTUAL POLICIA DE FORMOSA
+          INFORMACION PARA AFILIADOS
         </h1>
         <p className="text-white/85 text-center text-[13px] mt-2 max-w-[320px] leading-snug">
-          INFORMACION PARA AFILIADOS</p>
-          <p className="text-white/85 text-center text-[13px] mt-2 max-w-[320px] leading-snug">
-            Toca el menu para ver los requisitos de cada tramite
-          </p>
-
+          TOCA EL MENU PARA VER LA INFORMACION</p>
         {/* Menús - Pills Linktree */}
         <div className="w-full flex flex-col gap-3 mt-6">
           {menus.map((menu) => {
@@ -114,6 +110,9 @@ export default function Home() {
           <p className="text-center text-white/50 text-xs mt-4">
             + Próximamente más menús. Agregables sin reimprimir QR.
           </p>
+          <footer className="text-center text-white/50 text-xs mt-4">
+            © 2026 NorthSystem. Todos los derechos reservados.
+          </footer>
         </div>
       </div>
     </div>
