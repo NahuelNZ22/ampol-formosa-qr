@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import jsPDF from "jspdf";
 
 const menus = [
   {
@@ -17,6 +18,110 @@ const menus = [
     ],
   },
 ];
+
+async function downloadMenuPDF(menu: { titulo: string; items: string[] }) {
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 20;
+
+  // Fondo header formal
+  doc.setFillColor(14, 58, 95); // #0e3a5f
+  doc.rect(0, 0, pageW, 38, "F");
+
+  // Logo esquina superior izquierda - chico a medio
+  try {
+    const logoUrl = encodeURI("/logo_nuevo_amp-sin fondo.png");
+    const res = await fetch(logoUrl);
+    if (res.ok) {
+      const blob = await res.blob();
+      const base64: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      // 18mm x 18mm centrado vertical en header
+      doc.addImage(base64, "PNG", margin - 2, 8, 22, 22);
+    }
+  } catch {}
+
+  // Título institución - todo en mayúscula
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.text("ASOCIACION MUTUAL POLICIA DE FORMOSA", pageW / 2, 16, { align: "center" });
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text("INFORMACION PARA AFILIADOS", pageW / 2, 22, { align: "center" });
+
+  // Card título menú
+  let y = 48;
+  doc.setFillColor(240, 245, 250);
+  doc.setDrawColor(14, 58, 95);
+  doc.roundedRect(margin - 4, y - 8, pageW - margin * 2 + 8, 14, 3, 3, "FD");
+  doc.setTextColor(14, 58, 95);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text(menu.titulo.toUpperCase(), pageW / 2, y, { align: "center" });
+
+  y += 12;
+  doc.setDrawColor(200, 210, 225);
+  doc.line(margin, y, pageW - margin, y);
+  y += 8;
+
+  // Requisitos numerados - todo en mayúscula
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(40, 50, 70);
+  menu.items.forEach((item, idx) => {
+    const text = item.toUpperCase();
+    const textMaxW = pageW - margin * 2 - 12;
+
+    // Círculo numerado
+    const circleY = y + 1.2;
+    doc.setFillColor(26, 111, 181);
+    doc.circle(margin + 3, circleY, 3.5, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.text(String(idx + 1), margin + 3, circleY + 1, { align: "center" });
+
+    // Texto
+    doc.setTextColor(30, 40, 60);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9.5);
+    const lines = doc.splitTextToSize(text, textMaxW);
+    doc.text(lines, margin + 10, y + 2.5);
+
+    const h = Math.max(8, lines.length * 5.5);
+    y += h + 4;
+
+    // Si se acerca al final, nueva página
+    if (y > pageH - 28) {
+      doc.addPage();
+      y = 20;
+    }
+  });
+
+  y += 4;
+  doc.setDrawColor(14, 58, 95);
+  doc.line(margin, y, pageW - margin, y);
+  y += 7;
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(8);
+  doc.setTextColor(100, 110, 130);
+  doc.text("PRESENTAR DOCUMENTACION EN SEDE CENTRAL. DOCUMENTO GENERADO DIGITALMENTE.".toUpperCase(), pageW / 2, y, { align: "center" });
+
+  // Footer - todo en mayúscula, sin fecha
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.setTextColor(140, 150, 165);
+  doc.text("© 2026 NORTHSYSTEM — ASOCIACION MUTUAL POLICIA DE FORMOSA", pageW / 2, pageH - 10, { align: "center" });
+
+  const fileName = `${menu.titulo.replace(/\s+/g, "_").toUpperCase()}_${new Date().toISOString().slice(0, 10)}.pdf`;
+  doc.save(fileName);
+}
 
 export default function Home() {
   const [openId, setOpenId] = useState<string | null>(null);
@@ -76,9 +181,12 @@ export default function Home() {
                   </span>
                 </button>
 
-                {/* Acordeón */}
+                {/* Acordeón - despliegue suave con stagger (más lento) */}
                 {isOpen && (
-                  <div className="mt-3 animate-in fade-in duration-200">
+                  <div
+                    className="mt-3 overflow-hidden"
+                    style={{ animation: "accordionIn 0.7s cubic-bezier(0.22,1,0.36,1)" }}
+                  >
                     <div className="rounded-[22px] bg-white text-slate-800 p-4 shadow-xl border border-white/50">
                       <p className="text-xs font-bold tracking-widest text-[#0a2a52] mb-3">
                         REQUISITOS:
@@ -87,7 +195,11 @@ export default function Home() {
                         {menu.items.map((item, idx) => (
                           <li
                             key={idx}
-                            className="flex gap-2.5 items-start text-[12.5px] leading-snug font-medium bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5"
+                            className="flex gap-2.5 items-start text-[12.5px] leading-snug font-medium bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 opacity-0"
+                            style={{
+                              animation: "staggerIn 0.6s cubic-bezier(0.22,1,0.36,1) forwards",
+                              animationDelay: `${idx * 110}ms`,
+                            }}
                           >
                             <span className="mt-0.5 h-5 w-5 shrink-0 rounded-full bg-[#1a6fb5] text-white flex items-center justify-center text-[10px] font-bold">
                               {idx + 1}
@@ -96,9 +208,26 @@ export default function Home() {
                           </li>
                         ))}
                       </ul>
-                      <p className="text-[11px] text-slate-500 text-center mt-3">
+                      <p
+                        className="text-[11px] text-slate-500 text-center mt-3 opacity-0"
+                        style={{
+                          animation: "staggerIn 0.6s cubic-bezier(0.22,1,0.36,1) forwards",
+                          animationDelay: `${menu.items.length * 110}ms`,
+                        }}
+                      >
                         Presentar documentación en sede central
                       </p>
+                      <button
+                        type="button"
+                        onClick={() => downloadMenuPDF(menu)}
+                        className="mt-4 w-full flex items-center justify-center gap-2 rounded-xl bg-[#0e3a5f] hover:bg-[#123a6b] active:scale-[0.99] text-white text-[12px] font-bold py-3 shadow-md transition-all border border-[#0e3a5f] opacity-0"
+                        style={{
+                          animation: "staggerIn 0.6s cubic-bezier(0.22,1,0.36,1) forwards",
+                          animationDelay: `${(menu.items.length + 1) * 110}ms`,
+                        }}
+                      >
+                        DESCARGAR PDF
+                      </button>
                     </div>
                   </div>
                 )}
